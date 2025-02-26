@@ -25,6 +25,7 @@ import UpProviderContext from "./UpProviderContext";
 const provider = (typeof window !== 'undefined') ? createClientUPProvider() : null
 
 const UpProvider = ({children}: {children: ReactNode}) => {
+  console.log(provider)
   const [chainId, setChainId] = useState<number>(0);
   const [accounts, setAccounts] = useState<Array<Address>>([]);
   const [contextAccounts, setContextAccounts] = useState<Array<Address>>([]);
@@ -47,7 +48,7 @@ const UpProvider = ({children}: {children: ReactNode}) => {
       try {
         if (!client || !provider) return;
 
-        const _chainId = (await provider.request('eth_chainId') as number);
+        const _chainId = (await provider.request('eth_chainId'));
         if (!mounted) return
         setChainId(_chainId);
 
