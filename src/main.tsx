@@ -4,7 +4,5 @@ import App from './App.tsx'
 import UpProvider from './context/UpProvider.tsx'
 
 createRoot(document.getElementById('root')!).render(
-  <UpProvider>
     <App />
-  </UpProvider>,
 )

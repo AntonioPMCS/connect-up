@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import './App.css'
-import UpProviderContext from './context/UpProviderContext';
+import { useUpProvider } from './context/UpProviderContext';
+import UpProvider from './context/UpProvider';
 
 // Import the LUKSO web-components library
 let promise: Promise<unknown> | null = null;
@@ -14,7 +15,7 @@ function App() {
     accounts, 
     contextAccounts, 
     walletConnected
-  } = useContext(UpProviderContext)
+  } = useUpProvider()
 
   const [mounted, setMounted] = useState(false);
 
@@ -30,14 +31,14 @@ function App() {
   }
 
   return (
-    <>
+    <UpProvider>
       <h2>
         Grid Host: {contextAccounts[0]}
       </h2>
       <h2>
         Connected Profile: {walletConnected? 'True' : 'False'} - {accounts[0]}
       </h2>
-    </>
+    </UpProvider>
   )
 }
 
