@@ -38,7 +38,7 @@ const UpProvider = ({children}: {children: ReactNode}) => {
       });
     }
     return null;
-  }, [provider, chainId])
+  }, [chainId])
 
   useEffect(() => {
     let mounted = true;
@@ -47,11 +47,11 @@ const UpProvider = ({children}: {children: ReactNode}) => {
       try {
         if (!client || !provider) return;
 
-        const _chainId = (await client.getChainId() as number);
+        const _chainId = (await provider.request('eth_chainId') as number);
         if (!mounted) return
         setChainId(_chainId);
 
-        const _accounts = (await client.getAddresses() as Array<Address>);
+        const _accounts = (await provider.request('eth_accounts') as Array<Address>);
         if (!mounted) return
         setAccounts(_accounts);
 
@@ -93,7 +93,7 @@ const UpProvider = ({children}: {children: ReactNode}) => {
         provider.removeListener("chainChanged", chainChanged);
       };
     }
-  }, [client, accounts[0], contextAccounts[0], accounts.length, contextAccounts.length]);
+  }, [client, accounts[0], contextAccounts[0]]);
 
   return (
     <UpProviderContext.Provider
