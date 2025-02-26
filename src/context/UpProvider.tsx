@@ -57,7 +57,7 @@ const UpProvider = ({ children }: { children: ReactNode }) => {
     async function init() {
       try {
         console.log("Fetching accounts...");
-        const _accounts = (await client.getAddresses()) as Array<Address>;
+        const _accounts = (await (client as any).getAddresses()) as Array<Address>;
         console.log("✅ Fetched accounts:", _accounts);
         setAccounts(_accounts);
 
@@ -89,14 +89,14 @@ const UpProvider = ({ children }: { children: ReactNode }) => {
       setChainId(_chainId);
     };
 
-    provider.on("accountsChanged", handleAccountsChanged);
-    provider.on("contextAccountsChanged", handleContextAccountsChanged);
-    provider.on("chainChanged", handleChainChanged);
+    (provider as any).on("accountsChanged", handleAccountsChanged);
+    (provider as any).on("contextAccountsChanged", handleContextAccountsChanged);
+    (provider as any).on("chainChanged", handleChainChanged);
 
     return () => {
-      provider.removeListener("accountsChanged", handleAccountsChanged);
-      provider.removeListener("contextAccountsChanged", handleContextAccountsChanged);
-      provider.removeListener("chainChanged", handleChainChanged);
+      (provider as any).removeListener("accountsChanged", handleAccountsChanged);
+      (provider as any).removeListener("contextAccountsChanged", handleContextAccountsChanged);
+      (provider as any).removeListener("chainChanged", handleChainChanged);
     };
   }, [client, provider]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css'
 import { useUpProvider } from './context/UpProviderContext';
 import UpProvider from './context/UpProvider';
