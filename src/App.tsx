@@ -1,29 +1,16 @@
-import { useContext } from 'react';
-import './App.css'
-import UpProviderContext from './context/UpProviderContext';
+import './App.css';
+import Router from './routes/Router';
+import { useRoutes } from 'react-router-dom';
 
 function App() {
-  // Track connected accounts
-  const {
-    accounts, 
-    contextAccounts, 
-    walletConnected,
-    chainId
-  } = useContext(UpProviderContext)
+  // Configurare le rotte usando useRoutes
+  const routing = useRoutes(Router);
 
   return (
-    <main>
-      <h2>
-        Grid Host: {contextAccounts[0]}
-      </h2>
-      <h2>
-        Connected Profile: {walletConnected? 'True' : 'False'} - {accounts[0]}
-      </h2>
-      <h2>
-        chainId: {chainId}
-      </h2> 
-    </main>
-  )
+    <>
+      {routing}
+    </>
+  );
 }
 
-export default App
+export default App;

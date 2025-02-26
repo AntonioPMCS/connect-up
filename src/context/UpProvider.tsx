@@ -14,32 +14,72 @@
  * - selectedAddress: Currently selected address for transactions
  * - isSearching: Loading state indicator
  */
+"use client";
 
 import { createClientUPProvider } from "@lukso/up-provider";
-import { createWalletClient, custom, WalletClient} from "viem";
+import { createWalletClient, custom, WalletClient } from "viem";
 import { luksoTestnet, lukso } from "viem/chains";
-import { useEffect, useState, ReactNode, useMemo } from "react";
-import { Address } from "../types/Address";
-import UpProviderContext from "./UpProviderContext";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useMemo,
+} from "react";
 
-const provider = (typeof window !== 'undefined') ? createClientUPProvider() : null
+interface UpProviderContext {
+  provider: any;
+  client: any;
+  chainId: number;
+  accounts: Array<`0x${string}`>;
+  contextAccounts: Array<`0x${string}`>;
+  walletConnected: boolean;
+  selectedAddress: `0x${string}` | null;
+  setSelectedAddress: (address: `0x${string}` | null) => void;
+  isSearching: boolean;
+  setIsSearching: (isSearching: boolean) => void;
+}
 
-const UpProvider = ({children}: {children: ReactNode}) => {
-  console.log(provider)
+const UpContext = createContext<UpProviderContext | undefined>(undefined);
+
+export function useUpProvider() {
+  const context = useContext(UpContext);
+  if (!context) {
+    throw new Error("useUpProvider must be used within a UpProvider");
+  }
+  return context;
+}
+
+interface UpProviderProps {
+  children: ReactNode;
+}
+
+export function UpProvider({ children }: UpProviderProps) {
+  const [provider] = useState(() =>
+    typeof window !== "undefined" ? createClientUPProvider() : null
+  );
+
   const [chainId, setChainId] = useState<number>(0);
-  const [accounts, setAccounts] = useState<Array<Address>>([]);
-  const [contextAccounts, setContextAccounts] = useState<Array<Address>>([]);
-  const [walletConnected, setWalletConnected] = useState<boolean>(false);
- 
+  const [accounts, setAccounts] = useState<Array<`0x${string}`>>([]);
+  const [contextAccounts, setContextAccounts] = useState<Array<`0x${string}`>>(
+    []
+  );
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<`0x${string}` | null>(
+    null
+  );
+  const [isSearching, setIsSearching] = useState(false);
+
   const client: WalletClient | null = useMemo(() => {
     if (provider && chainId) {
       return createWalletClient({
-        chain:chainId === 42? lukso : luksoTestnet,
-        transport: custom(provider)
+        chain: chainId === 42 ? lukso : luksoTestnet,
+        transport: custom(provider),
       });
     }
     return null;
-  }, [chainId])
+  }, [provider, chainId]);
 
   useEffect(() => {
     let mounted = true;
@@ -48,20 +88,18 @@ const UpProvider = ({children}: {children: ReactNode}) => {
       try {
         if (!client || !provider) return;
 
-        const _chainId = (await provider.request('eth_chainId'));
-        if (!mounted) return
+        const _chainId = (await client.getChainId()) as number;
+        if (!mounted) return;
         setChainId(_chainId);
 
-        const _accounts = (await provider.request('eth_accounts') as Array<Address>);
-        if (!mounted) return
+        const _accounts = (await client.getAddresses()) as Array<`0x${string}`>;
+        if (!mounted) return;
         setAccounts(_accounts);
 
         const _contextAccounts = provider.contextAccounts;
-        if (!mounted) return
+        if (!mounted) return;
         setContextAccounts(_contextAccounts);
-
-        setWalletConnected(_accounts.length> 0 && _contextAccounts.length > 0);
-      
+        setWalletConnected(_accounts.length > 0 && _contextAccounts.length > 0);
       } catch (error) {
         console.error(error);
       }
@@ -70,47 +108,53 @@ const UpProvider = ({children}: {children: ReactNode}) => {
     init();
 
     if (provider) {
-      const accountsChanged = (_accounts: Array<Address>) => {
+      const accountsChanged = (_accounts: Array<`0x${string}`>) => {
         setAccounts(_accounts);
         setWalletConnected(_accounts.length > 0 && contextAccounts.length > 0);
       };
 
-      const contextAccountsChanged = (_accounts: Array<Address>) => {
+      const contextAccountsChanged = (_accounts: Array<`0x${string}`>) => {
         setContextAccounts(_accounts);
-        setWalletConnected(_accounts.length > 0 && contextAccounts.length > 0);
-      }
-      
-      const chainChanged = (_chaindId: number) => {
-        setChainId(_chaindId);
+        setWalletConnected(accounts.length > 0 && _accounts.length > 0);
+      };
+
+      const chainChanged = (_chainId: number) => {
+        setChainId(_chainId);
       };
       provider.on("accountsChanged", accountsChanged);
-      provider.on("contextAccountsChanged", contextAccountsChanged)
       provider.on("chainChanged", chainChanged);
+      provider.on("contextAccountsChanged", contextAccountsChanged);
 
       return () => {
         mounted = false;
         provider.removeListener("accountsChanged", accountsChanged);
-        provider.removeListener("contextAccountsChanged",contextAccountsChanged);
+        provider.removeListener(
+          "contextAccountsChanged",
+          contextAccountsChanged
+        );
         provider.removeListener("chainChanged", chainChanged);
       };
     }
-  }, [client, accounts[0], contextAccounts[0]]);
+  }, [client, provider, accounts.length, contextAccounts.length]);
 
   return (
-    <UpProviderContext.Provider
-      value = {{
+    <UpContext.Provider
+      value={{
         provider,
         client,
         chainId,
         accounts,
         contextAccounts,
         walletConnected,
-      }}>
-        <div className="min-h-screen flex items-center justify-center">
-          {children}
-        </div>
-      </UpProviderContext.Provider>
-  )
+        selectedAddress,
+        setSelectedAddress,
+        isSearching,
+        setIsSearching,
+      }}
+    >
+      <div className=" min-h-screen flex items-center justify-center">
+        <div className="w-full max-w-md">{children}</div>
+      </div>
+    </UpContext.Provider>
+  );
 }
-
-export default UpProvider;
