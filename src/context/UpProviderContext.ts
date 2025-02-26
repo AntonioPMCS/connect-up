@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext } from "react";
 import { Address } from "../types/Address";
 
 interface UpProviderContextType {
@@ -18,15 +18,5 @@ const UpProviderContext = createContext<UpProviderContextType>({
   contextAccounts: [],
   walletConnected: false,
 })
-
-
-export function useUpProvider() {
-  const context = useContext(UpProviderContext)
-  if (!context) {
-    throw new Error('useUpProvider must be used within a UpProvider')
-  }
-  return context
-}
-
 
 export default UpProviderContext

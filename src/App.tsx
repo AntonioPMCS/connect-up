@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import './App.css'
-import { useUpProvider } from './context/UpProviderContext';
 import UpProvider from './context/UpProvider';
+import UpProviderContext from './context/UpProviderContext';
 
 // Import the LUKSO web-components library
 let promise: Promise<unknown> | null = null;
@@ -15,7 +15,7 @@ function App() {
     accounts, 
     contextAccounts, 
     walletConnected
-  } = useUpProvider()
+  } = useContext(UpProviderContext)
 
   const [mounted, setMounted] = useState(false);
 

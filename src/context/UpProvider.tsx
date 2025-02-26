@@ -1,119 +1,115 @@
+/**
+ * @component UpProvider
+ * @description Context provider that manages Universal Profile (UP) wallet connections and state
+ * for LUKSO blockchain interactions on Grid. It handles wallet connection status, account management, and chain
+ * information while providing real-time updates through event listeners.
+ *
+ * @provides {UpProviderContext} Context containing:
+ * - provider: UP-specific wallet provider instance
+ * - client: Viem wallet client for blockchain interactions
+ * - chainId: Current blockchain network ID
+ * - accounts: Array of connected wallet addresses
+ * - contextAccounts: Array of Universal Profile accounts
+ * - walletConnected: Boolean indicating active wallet connection
+ * - selectedAddress: Currently selected address for transactions
+ * - isSearching: Loading state indicator
+ */
+
 import { createClientUPProvider } from "@lukso/up-provider";
-import { createWalletClient, custom, WalletClient } from "viem";
+import { createWalletClient, custom, WalletClient} from "viem";
 import { luksoTestnet, lukso } from "viem/chains";
 import { useEffect, useState, ReactNode, useMemo } from "react";
 import { Address } from "../types/Address";
 import UpProviderContext from "./UpProviderContext";
 
-const UpProvider = ({ children }: { children: ReactNode }) => {
-  const [provider] = useState(() =>
-    typeof window !== "undefined" ? createClientUPProvider() : null
-  );
+const provider = (typeof window !== 'undefined') ? createClientUPProvider() : null
+
+const UpProvider = ({children}: {children: ReactNode}) => {
   const [chainId, setChainId] = useState<number>(0);
   const [accounts, setAccounts] = useState<Array<Address>>([]);
   const [contextAccounts, setContextAccounts] = useState<Array<Address>>([]);
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
-
-  // ✅ Fetch chainId as soon as provider exists
-  useEffect(() => {
-    console.log("Running useEffect that fetches chainId");
-    console.log("Provider value inside it: "+provider)
-    if (!provider) return;
-
-    async function fetchChainId() {
-      console.log("Fetchin chainId...")
-      try {
-        console.log("Inside try block...")
-        console.log(provider)
-        const initialChainId = (provider as any).chainId;
-        console.log("✅ Fetched initial chainId:", initialChainId);
-        setChainId(Number(initialChainId));
-      } catch (error) {
-        console.error("❌ Error fetching chainId:", error);
-      }
-    }
-
-    fetchChainId();
-  }, [provider]); // 🔥 Runs when provider is ready
-
-  // ✅ Create client only after chainId is fetched
+ 
   const client: WalletClient | null = useMemo(() => {
-    if (provider && chainId !== 0) {
-      console.log("✅ Creating wallet client with chainId:", chainId);
+    if (provider && chainId) {
       return createWalletClient({
-        chain: chainId === 42 ? lukso : luksoTestnet,
-        transport: custom(provider),
+        chain:chainId === 42? lukso : luksoTestnet,
+        transport: custom(provider)
       });
     }
     return null;
-  }, [provider, chainId]);
+  }, [provider, chainId])
 
   useEffect(() => {
-    if (!client) {
-      console.log("🚨 Client is null, skipping init.");
-      return;
-    }
+    let mounted = true;
 
     async function init() {
       try {
-        console.log("Fetching accounts...");
-        const _accounts = (await (client as any).getAddresses()) as Array<Address>;
-        console.log("✅ Fetched accounts:", _accounts);
+        if (!client || !provider) return;
+
+        const _chainId = (await client.getChainId() as number);
+        if (!mounted) return
+        setChainId(_chainId);
+
+        const _accounts = (await client.getAddresses() as Array<Address>);
+        if (!mounted) return
         setAccounts(_accounts);
 
-        const _contextAccounts = provider?.contextAccounts || [];
-        console.log("✅ Context accounts:", _contextAccounts);
+        const _contextAccounts = provider.contextAccounts;
+        if (!mounted) return
         setContextAccounts(_contextAccounts);
 
-        setWalletConnected(_accounts.length > 0 && _contextAccounts.length > 0);
+        setWalletConnected(_accounts.length> 0 && _contextAccounts.length > 0);
+      
       } catch (error) {
-        console.error("❌ Error initializing wallet:", error);
+        console.error(error);
       }
     }
 
     init();
 
-    // 🔥 Handle provider events
-    const handleAccountsChanged = (_accounts: Array<Address>) => {
-      setAccounts(_accounts);
-      setWalletConnected(_accounts.length > 0 && contextAccounts.length > 0);
-    };
+    if (provider) {
+      const accountsChanged = (_accounts: Array<Address>) => {
+        setAccounts(_accounts);
+        setWalletConnected(_accounts.length > 0 && contextAccounts.length > 0);
+      };
 
-    const handleContextAccountsChanged = (_accounts: Array<Address>) => {
-      setContextAccounts(_accounts);
-      setWalletConnected(_accounts.length > 0 && _accounts.length > 0);
-    };
+      const contextAccountsChanged = (_accounts: Array<Address>) => {
+        setContextAccounts(_accounts);
+        setWalletConnected(_accounts.length > 0 && contextAccounts.length > 0);
+      }
+      
+      const chainChanged = (_chaindId: number) => {
+        setChainId(_chaindId);
+      };
+      provider.on("accountsChanged", accountsChanged);
+      provider.on("contextAccountsChanged", contextAccountsChanged)
+      provider.on("chainChanged", chainChanged);
 
-    const handleChainChanged = (_chainId: number) => {
-      console.log("🔄 Chain changed to:", _chainId);
-      setChainId(_chainId);
-    };
-
-    (provider as any).on("accountsChanged", handleAccountsChanged);
-    (provider as any).on("contextAccountsChanged", handleContextAccountsChanged);
-    (provider as any).on("chainChanged", handleChainChanged);
-
-    return () => {
-      (provider as any).removeListener("accountsChanged", handleAccountsChanged);
-      (provider as any).removeListener("contextAccountsChanged", handleContextAccountsChanged);
-      (provider as any).removeListener("chainChanged", handleChainChanged);
-    };
-  }, [client, provider]);
+      return () => {
+        mounted = false;
+        provider.removeListener("accountsChanged", accountsChanged);
+        provider.removeListener("contextAccountsChanged",contextAccountsChanged);
+        provider.removeListener("chainChanged", chainChanged);
+      };
+    }
+  }, [client, accounts[0], contextAccounts[0], accounts.length, contextAccounts.length]);
 
   return (
     <UpProviderContext.Provider
-      value={{
+      value = {{
         provider,
         client,
         chainId,
         accounts,
         contextAccounts,
         walletConnected,
-      }}
-    >
-      {children}
-    </UpProviderContext.Provider>
-  );
-};
+      }}>
+        <div className="min-h-screen flex items-center justify-center">
+          {children}
+        </div>
+      </UpProviderContext.Provider>
+  )
+}
 
 export default UpProvider;
